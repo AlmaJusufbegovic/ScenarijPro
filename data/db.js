@@ -1,11 +1,24 @@
 const { Sequelize} = require("sequelize");
 const bcrypt = require('bcrypt');
 
-const sequelize = new Sequelize("wt26", "root", "", { 
-    host: "localhost",
-    dialect: "mysql",
-    logging: false, 
-});
+const sequelize = new Sequelize(
+    process.env.DB_NAME || "wt26",
+    process.env.DB_USER || "root",
+    process.env.DB_PASSWORD || "",
+    { 
+        host: process.env.DB_HOST || "localhost",
+        port: process.env.DB_PORT || 3306,
+        dialect: "mysql",
+        logging: false,
+        // retry logika jer MySQL kontejner treba par sekundi da se pokrene
+        pool: {
+            max: 5,
+            min: 0,
+            acquire: 60000,
+            idle: 10000
+        }
+    }
+);
 
 const Scenario = sequelize.define("Scenario", {
     id: {
@@ -96,7 +109,6 @@ const Checkpoint = sequelize.define("Checkpoint", {
     timestamps: false 
 });
 
-//definiranje User modela
 const User = sequelize.define("User", {
     id: {
         type: Sequelize.INTEGER,
@@ -126,8 +138,6 @@ const User = sequelize.define("User", {
 }, {
     timestamps: true,
     hooks: {
-        //genSaltSync je sinhrona verzija generiranja salta
-        //genSalt je asinhrona ver, ne zaustavlja rad citave stranice prilikom registracije
         beforeCreate: async (user) => {
             if (user.password) {
             const salt = await bcrypt.genSalt(10, 'a');
@@ -152,12 +162,11 @@ const UserScenario = sequelize.define("UserScenario", {
     role: { 
         type: Sequelize.STRING, 
         defaultValue: "owner" 
-    } // Opcionalno: npr. vlasnik ili urednik
+    }
 }, { 
     timestamps: false 
 });
 
-//relacije
 Scenario.hasMany(Line, { foreignKey: 'scenarioId', onDelete: 'CASCADE' });
 Line.belongsTo(Scenario, { foreignKey: 'scenarioId' });
 

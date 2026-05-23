@@ -1,0 +1,24 @@
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  # Ovaj runner je registriran na EC2 instanci
+  tags:
+    - arm-ec2
+  only:
+    - main
+  script:
+    # Idi u folder gdje je projekat na EC2
+    - cd /home/ubuntu/app
+
+    # Povuci najnoviji kod
+    - git pull origin main
+
+    # Rebuild i restart kontejnera (bez downtime-a za db)
+    - docker compose up --build -d app
+
+    # Provjeri da app radi
+    - sleep 5
+    - docker compose ps
+    - docker compose logs app --tail=20
